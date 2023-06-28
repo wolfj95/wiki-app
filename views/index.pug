@@ -1,0 +1,9 @@
+html
+  head
+    title All Tables
+  body
+    h1 All Tables
+    ul
+      each table in tables
+        li
+          a(href='/table/'+table)= table

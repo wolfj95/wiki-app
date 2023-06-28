@@ -1,0 +1,11 @@
+html
+  head
+    //-TODO: need to make sure this is the first property after id rather than a named one
+    title= entry.Name
+  body
+    h1= entry.Name
+    each val, index in entry
+      if index != 'id'
+        h2= index
+        p= val
+

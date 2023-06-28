@@ -5,6 +5,9 @@ const express = require('express')
 const app = express()
 const port = 3000
 
+app.set('views', './views')
+app.set('view engine', 'pug')
+
 const supabase = supabaseClient.createClient(
   process.env.SUPABASE_PROJECT_ID,
   process.env.SUPABASE_API_KEY
@@ -12,14 +15,25 @@ const supabase = supabaseClient.createClient(
 
 
 app.get('/', async (req, res) => {
-  res.send("hello world!")
+  let { data: tables, error } = await supabase
+  .from('pg_tables')
+  .select('tablename')
+  .eq('schemaname', 'public')
+
+  if (error) {
+    console.log("error getting all tables:");
+    console.log(error);
+    return
+  }
+  console.log(tables)
+  res.render('index', { tables: tables })
 })
 
 app.get('/table/:tableName', async(req, res) => {
 
   let { data: table, error } = await supabase
     .from(req.params.tableName)
-    .select("name")
+    .select()
 
   if (error) {
     console.log("error getting table error:");
@@ -27,8 +41,7 @@ app.get('/table/:tableName', async(req, res) => {
     return
   }
   console.log(table)
-
-  res.send(table)
+  res.render('table', {table_name: req.params.tableName, table_data: table})
 })
 
 app.get('/table/:tableName/entry/:entryId', async(req, res) => {
@@ -45,7 +58,7 @@ app.get('/table/:tableName/entry/:entryId', async(req, res) => {
   }
   console.log(entry)
 
-  res.send(entry)
+  res.render('entry', {entry: entry[0]})
 })
 
 
