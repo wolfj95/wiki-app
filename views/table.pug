@@ -6,4 +6,4 @@ html
     ul
       each entry in table_data
         li
-          a(href='/table/'+table_name+'/entry/'+entry.id)= entry.name
+          a(href='/table/'+table_name+'/entry/'+entry.id)= Object.values(entry)[1]

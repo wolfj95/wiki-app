@@ -8,17 +8,23 @@ const port = 3000
 app.set('views', './views')
 app.set('view engine', 'pug')
 
+const options = {
+  db: {
+    schema: 'public'
+  }
+}
+
 const supabase = supabaseClient.createClient(
   process.env.SUPABASE_PROJECT_ID,
-  process.env.SUPABASE_API_KEY
+  process.env.SUPABASE_API_KEY,
+  options
 );
 
 
 app.get('/', async (req, res) => {
+  
   let { data: tables, error } = await supabase
-  .from('pg_tables')
-  .select('tablename')
-  .eq('schemaname', 'public')
+  .rpc('get_public_tables')
 
   if (error) {
     console.log("error getting all tables:");
