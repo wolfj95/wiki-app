@@ -1,9 +1,0 @@
-html
-  head
-    title= table_name
-  body
-    h1= 'Entries in the ' + table_name + ' Category'
-    ul
-      each entry in table_data
-        li
-          a(href='/table/'+table_name+'/entry/'+entry.id)= Object.values(entry)[1]
