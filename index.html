@@ -234,7 +234,11 @@
               tables_dict = {}
 
               for SHEET_NAME in sheet_names:
-                  url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
+                  #for dev
+                  #url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
+
+                  #for prod
+                  url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
 
                   response = await pyfetch(url)
                   if response.status == 200:
