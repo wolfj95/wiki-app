@@ -17,6 +17,9 @@
           tables: {},
         }
 
+        text_size_string = [
+          "text-xs", "text-sm", "text-base", "text-lg", "text-xl", "text-2xl", "text-3xl", "text-4xl", "text-5xl", "text-6xl", "text-7xl", "text-7xl", "text-8xl", "text-9xl"]
+
         set_table(table_name) {
           this.state.current_table = table_name
         }
@@ -30,23 +33,27 @@
         home_view() {
           return (`
     <div class="px-4 sm:px-6 lg:px-8">
-      <div class="sm:flex sm:items-center">
+      <div class="p-4 sm:flex sm:items-center">
         <div class="sm:flex-auto">
-          <h1 class="text-4xl font-semibold text-gray-200">Wiki App</h1>
+          <h1 class="text-5xl font-semibold text-gray-200">Wiki App</h1>
         </div>
       </div>
 
      ${this.search_component()} 
 
-     ${this.state.current_entry ?
-        this.single_entry_component()
-      : this.state.current_table ? 
-        this.all_entries_in_table_component()
-      : this.state.sheet_url ?
-        this.all_tables_component()
-      : 
-        this.instructions_component()
-      }
+     <div class="p-4 m-4 border border-gray-300 rounded-lg">
+      ${this.state.sheet_url ? this.nav_component() : (``)}
+
+       ${this.state.current_entry ?
+          this.single_entry_component()
+        : this.state.current_table ? 
+          this.all_entries_in_table_component()
+        : this.state.sheet_url ?
+          this.all_tables_component()
+        : 
+          this.instructions_component()
+        }
+      </div>
           
     </div>
   `)
@@ -54,7 +61,7 @@
 
         search_component() {
           return (`
-      <div class="max-w-2xl">
+      <div class="p-4 max-w-2xl">
         <form>   
           <label for="default-search" class="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">Load Data</label>
           <div class="relative">
@@ -69,6 +76,52 @@
         </form>
       </div>
       `)
+        }
+
+        nav_component() {
+          return (`
+          <nav class="p-2 w-full rounded-md">
+            <ol class="list-reset flex">
+              ${this.state.current_entry ? (`
+                <li>
+                  <a
+                    onclick="appComponent.set_table(null);appComponent.set_entry(null);appComponent.render()"
+                    class="text-blue-700 transition duration-150 ease-in-out hover:text-blue-800 focus:text-blue-800 active:text-blue-700"
+                    >Home</a
+                  >
+                </li>
+                <li>
+                  <span class="mx-2 text-neutral-500 dark:text-neutral-400">/</span>
+                </li>
+                <li>
+                  <a
+                    onclick="appComponent.set_entry(null);appComponent.render()"
+                    class="text-blue-700 transition duration-150 ease-in-out hover:text-blue-800 focus:text-blue-800 active:text-blue-700"
+                    >${this.state.current_table}</a
+                  >
+                </li>
+                <li>
+                  <span class="mx-2 text-gray-200">/</span>
+                </li>
+                <li class="text-gray-200">${this.state.current_entry}</li>
+              `) : (this.state.current_table ? (`
+                <li>
+                  <a
+                    onclick="appComponent.set_table(null);appComponent.render()"
+                    class="text-blue-700 transition duration-150 ease-in-out hover:text-blue-800 focus:text-blue-800 active:text-blue-700"
+                    >Home</a
+                  >
+                </li>
+                <li>
+                  <span class="mx-2 text-neutral-500 dark:text-neutral-400">/</span>
+                </li>
+                <li class="text-gray-200">${this.state.current_table}</li>
+              `) : (this.state.sheet_url) ? (`
+                <li class="text-gray-200">Home</li>
+              `) : (``))}
+            </ol>
+          </nav>
+          `)
         }
         
         instructions_component() {
@@ -126,22 +179,19 @@
           return (`
       <div class="sm:flex sm:items-center">
         <div class="sm:flex-auto">
-            ${this.article_representation(this.state.current_table, this.state.current_entry, [this.state.current_table], "", 2)}
+            ${this.article_representation(this.state.current_table, this.state.current_entry, [this.state.current_table], 7, 2)}
         </div>
       </div>
   `)
           }
 
-        article_representation(table_name, entry_id, tables_expanded_so_far, print_spacer, depth) {
+        article_representation(table_name, entry_id, tables_expanded_so_far, curr_header_level, depth) {
           let html = ``
           let table = JSON.parse(this.state.tables[table_name].table)
           let metadata_table = JSON.parse(this.state.tables[table_name].metadata)
           let title_field = this.state.database_meta[table_name].title_field
-          console.log(table)
-          console.log(metadata_table)
-          //TODO: check if title field exists first
           if (table.find(record => record.unique_id == entry_id)[title_field]) {
-            html += `<h2 class="font-semibold text-gray-200">${table.find(record => record.unique_id == entry_id)[title_field]}</h2>`
+            html += `<h2 class="font-semibold text-gray-200 ${this.text_size_string[curr_header_level]}">${table.find(record => record.unique_id == entry_id)[title_field]}</h2>`
           }
 
           //basecase
@@ -159,15 +209,15 @@
                     if (row["relationship_type"] == "one") {
                       console.log("one to one related table: ", related_table_name)
                       if (depth > 1 || !this.state.database_meta[related_table_name].title_field == null) {
-                        html += `<h2 class="font-semibold text-gray-200">${related_table_name}</h2>`
+                        html += `<h2 class="font-semibold text-gray-200 ${this.text_size_string[curr_header_level]}">${related_table_name}</h2>`
                       }
-                      html += this.article_representation(related_table_name, table.find(record => record.unique_id == entry_id)[field], tables_expanded_so_far + [related_table_name], print_spacer, depth - 1)
+                      html += this.article_representation(related_table_name, table.find(record => record.unique_id == entry_id)[field], tables_expanded_so_far + [related_table_name], curr_header_level-2, depth - 1)
                     } else{
                       let related_table = JSON.parse(this.state.tables[related_table_name]["table"])
                       console.log("many to many related table: ", related_table_name)
                       let foreign_key_column_name = table_name + "_id"
                       if (depth > 1 || !this.state.database_meta[related_table_name].title_field == null) {
-                        html += `<h2 class="font-semibold text-gray-200">${related_table_name}</h2>`
+                        html += `<h2 class="font-semibold text-gray-200 ${this.text_size_string[curr_header_level]}">${related_table_name}</h2>`
                       }
                       console.log("related table length: ", related_table.length)
                       for (let j = 0; j < related_table.length; j++) {
@@ -176,13 +226,14 @@
                         console.log("related table entry: ", related_table[j])
                         if (related_table[j][foreign_key_column_name] == entry_id) {
                           console.log("current entry found in related table")
-                          html += this.article_representation(related_table_name, related_table[j].unique_id, tables_expanded_so_far + [related_table_name], print_spacer, depth - 1)
+                          html += this.article_representation(related_table_name, related_table[j].unique_id, tables_expanded_so_far + [related_table_name], curr_header_level-2, depth - 1)
                         }
                       }
                     }
                   }
                 } else {
-                  html += `<h2 class="font-semibold text-gray-200">${field}</h2>
+                  // Regular data field
+                  html += `<h2 class="font-semibold text-gray-200 ${this.text_size_string[curr_header_level]}">${field}</h2>
                     <p class="text-gray-200">${table.find(record => record.unique_id == entry_id)[field]}</p>`
                 }
               }
@@ -215,10 +266,10 @@
               #get sheet names
 
               #for dev
-              #url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
+              url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
 
               #for prod
-              url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
+              #url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
 
               response = await pyfetch(url)
               if response.status == 200:
@@ -235,10 +286,10 @@
 
               for SHEET_NAME in sheet_names:
                   #for dev
-                  #url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
+                  url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
 
                   #for prod
-                  url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
+                  #url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
 
                   response = await pyfetch(url)
                   if response.status == 200:
