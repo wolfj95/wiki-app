@@ -142,7 +142,7 @@
       <div class="sm:flex sm:items-center">
         <div class="sm:flex-auto">
           <h1 class="text-4xl font-semibold text-gray-200">All Categories of Articles</h1>
-          <ul class="list-disc">
+          <ul class="list-disc px-5">
             ${this.state.database_meta ? Object.keys(this.state.database_meta).map(function (sheet) {
               return (`
                 <li class="text-gray-200" ><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_table('${sheet}');appComponent.render()">${sheet}</a></li>
@@ -161,7 +161,7 @@
       <div class="sm:flex sm:items-center">
         <div class="sm:flex-auto">
           <h1 class="text-4xl font-semibold text-gray-200">${this.state.current_table}</h1>
-          <ul class="list-disc">
+          <ul class="list-disc px-5">
             ${this.state.tables[this.state.current_table].table.length > 0 ? JSON.parse(this.state.tables[this.state.current_table].table).map(function (record) {
               return (`
                 <li class="text-gray-200" ><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_entry('${record["unique_id"]}');appComponent.render()">${record[appComponent.state.database_meta[appComponent.state.current_table].title_field]}</a></li>
@@ -185,178 +185,193 @@
   `)
           }
 
+        one_to_one_representation(table_name, entry_id) {
+          let html = `<h2 class="font-semibold text-gray-200 text-2xl">${table_name}:</h2>`
+          html += `<div class="px-4">`
+          let table = JSON.parse(this.state.tables[table_name]["table"])
+          let entry = table.find(record => record.unique_id == entry_id)
+          let title_field = this.state.database_meta[table_name].title_field
+          if (title_field) {
+            html += `<h2 class="font-semibold text-gray-200 text-xl">${entry[title_field]}</h2>`
+          }
+          console.log("one to one representation for entry:", entry)
+          let metadata_table = JSON.parse(this.state.tables[table_name].metadata)
+          for (let i = 0; i < metadata_table.length; i++) {
+            let row = metadata_table[i]
+            let field = row['field']
+            let data_type = row['data_type']
+            if (data_type != "unique_id" & field != title_field & data_type != "foreign key") {
+              html += `<p class="text-gray-200"><span class="font-semibold">${field}:</span> ${entry[field]}</p>`
+            }
+          } 
+          html += `</div>`
+          return(html)
+        }
+
+        one_to_many_representation(table_name, foreign_key_column_name, target_entry_id) {
+          let html = `<h2 class="font-semibold text-gray-200 text-2xl">${table_name}:</h2>`
+          html += `<ul class="list-disc px-5">`
+          let table = JSON.parse(this.state.tables[table_name]["table"])
+          //TODO what if no title field?
+          let title_field = this.state.database_meta[table_name].title_field
+          for (let j = 0; j < table.length; j++) {
+            if (table[j][foreign_key_column_name] == target_entry_id) {
+              html += `
+                <li class="text-gray-200" ><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_table('${table_name}');appComponent.set_entry('${table[j]["unique_id"]}');appComponent.render()">${table[j][title_field]}</a></li>
+              `
+            }
+          }
+          html += `</ul>`
+          return(html)
+        }
+
         article_representation(table_name, entry_id, tables_expanded_so_far, curr_header_level, depth) {
           let html = ``
           let table = JSON.parse(this.state.tables[table_name].table)
           let metadata_table = JSON.parse(this.state.tables[table_name].metadata)
           let title_field = this.state.database_meta[table_name].title_field
           if (table.find(record => record.unique_id == entry_id)[title_field]) {
-            html += `<h2 class="font-semibold text-gray-200 ${this.text_size_string[curr_header_level]}">${table.find(record => record.unique_id == entry_id)[title_field]}</h2>`
+            html += `<h2 class="font-semibold text-gray-200 text-4xl">${table.find(record => record.unique_id == entry_id)[title_field]}</h2>`
           }
 
-          //basecase
-          if (depth == 0) {
-            return html
-          } else {
-            for (let i = 0; i < metadata_table.length; i++) {
-              let row = metadata_table[i]
-              let field = row['field']
-              let data_type = row['data_type']
-              if (data_type != "unique_id" & field != title_field) {
-                if (data_type == "foreign key") {
-                  let related_table_name = row["related_table"]
-                  if (!tables_expanded_so_far.includes(related_table_name)) {
-                    if (row["relationship_type"] == "one") {
-                      console.log("one to one related table: ", related_table_name)
-                      if (depth > 1 || !this.state.database_meta[related_table_name].title_field == null) {
-                        html += `<h2 class="font-semibold text-gray-200 ${this.text_size_string[curr_header_level]}">${related_table_name}</h2>`
-                      }
-                      html += this.article_representation(related_table_name, table.find(record => record.unique_id == entry_id)[field], tables_expanded_so_far + [related_table_name], curr_header_level-2, depth - 1)
-                    } else{
-                      let related_table = JSON.parse(this.state.tables[related_table_name]["table"])
-                      console.log("many to many related table: ", related_table_name)
-                      let foreign_key_column_name = table_name + "_id"
-                      if (depth > 1 || !this.state.database_meta[related_table_name].title_field == null) {
-                        html += `<h2 class="font-semibold text-gray-200 ${this.text_size_string[curr_header_level]}">${related_table_name}</h2>`
-                      }
-                      console.log("related table length: ", related_table.length)
-                      for (let j = 0; j < related_table.length; j++) {
-                        console.log("current entry: ", entry_id)
-                        console.log("foreign key column name: ", foreign_key_column_name)
-                        console.log("related table entry: ", related_table[j])
-                        if (related_table[j][foreign_key_column_name] == entry_id) {
-                          console.log("current entry found in related table")
-                          html += this.article_representation(related_table_name, related_table[j].unique_id, tables_expanded_so_far + [related_table_name], curr_header_level-2, depth - 1)
-                        }
-                      }
-                    }
-                  }
+          for (let i = 0; i < metadata_table.length; i++) {
+            let row = metadata_table[i]
+            let field = row['field']
+            let data_type = row['data_type']
+            if (data_type != "unique_id" & field != title_field) {
+              if (data_type == "foreign key") {
+                let related_table_name = row["related_table"]
+                if (row["relationship_type"] == "one") {
+                    html += this.one_to_one_representation(related_table_name, table.find(record => record.unique_id == entry_id)[field])
                 } else {
-                  // Regular data field
-                  html += `<h2 class="font-semibold text-gray-200 ${this.text_size_string[curr_header_level]}">${field}</h2>
-                    <p class="text-gray-200">${table.find(record => record.unique_id == entry_id)[field]}</p>`
+                  let foreign_key_column_name = table_name + "_id"
+                  html += this.one_to_many_representation(related_table_name, foreign_key_column_name, entry_id)
                 }
+              } else {
+                // Regular data field
+                html += `<h2 class="font-semibold text-gray-200 text-2xl">${field}</h2>
+                  <p class="text-gray-200">${table.find(record => record.unique_id == entry_id)[field]}</p>`
               }
             }
           }
 
           return html
-          }
-
-          render() {
-            app.innerHTML = this.home_view()
-          }
-
-          async loadData() {
-            console.log('load data clicked')
-            this.state.sheet_url =  new URL(document.getElementById('sheet-url').value)
-            this.state.sheetId = this.state.sheet_url.pathname.split("/")[3]
-            let pyodide = await loadPyodide();
-            await pyodide.loadPackage("pandas");
-            await pyodide.runPythonAsync(`
-              import js
-              import pandas as pd
-              import urllib
-              from pyodide.http import pyfetch
-
-              SHEET_ID = js.appComponent.state.sheetId
-              print(SHEET_ID)
-
-
-              #get sheet names
-
-              #for dev
-              url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
-
-              #for prod
-              #url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
-
-              response = await pyfetch(url)
-              if response.status == 200:
-                  with open("metadata.csv", "wb") as f:
-                      f.write(await response.bytes())
-
-              # 2. load the csv file
-              database_meta_df = pd.read_csv("metadata.csv")
-              database_meta_df.set_index("sheetname", inplace=True)
-              sheet_names = database_meta_df.index.tolist()
-
-              # Get tables
-              tables_dict = {}
-
-              for SHEET_NAME in sheet_names:
-                  #for dev
-                  url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
-
-                  #for prod
-                  #url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
-
-                  response = await pyfetch(url)
-                  if response.status == 200:
-                      with open("table.csv", "wb") as f:
-                          f.write(await response.bytes())
-                  df = pd.read_csv("table.csv")
-                  tables_dict[SHEET_NAME] = {"table": df} 
-
-              # Get metadata for tables
-              meta_data = []
-              for table_name, table_dict in tables_dict.items():
-                  new_names = {}
-                  table = table_dict["table"]
-                  for column_name in table.columns:
-                      data_type = column_name.split("[")[1].replace(']','').strip()
-                      if data_type == 'unique_id':
-                          new_column_name = 'unique_id'
-                      else:
-                          new_column_name = column_name.split("[")[0].strip()
-
-                    # setup foreign key relationships
-                      if data_type == "foreign key":
-                          related_table = new_column_name.split("_id")[0]
-                          if related_table in tables_dict.keys():
-                              # add relationship data for related table to current table
-                              meta_data.append([related_table, table_name+'_id', "foreign key", table_name, "many"])
-                              # setup relationship data for current table to related table
-                              relationship_type = "one"
-                              meta_data.append([table_name, new_column_name, data_type, related_table, relationship_type])
-                          else:
-                              print(f"Error while setting up relationship: {table_name} table indicates a relationship with {related_table} table, but no such table exists. No relationships were created between these tables.")
-                      else:
-                          related_table = None
-                          relationship_type = None
-                          meta_data.append([table_name, new_column_name, data_type, related_table, relationship_type])
-                      new_names[column_name] = new_column_name
-                  if 'unique_id' not in new_names.values():
-                      print(f'Table definition error: No unique_id column was specificed for {table_name} table. Table not set up.')
-
-                  else:
-                      table.rename(columns=new_names,inplace=True)
-                      table.set_index("unique_id", inplace=True)
-                      
-              tables_meta_df = pd.DataFrame(meta_data, columns=['table_name','field','data_type','related_table','relationship_type'])
-
-              tables_dict_json = {}
-              for table_name in tables_meta_df["table_name"].unique():
-                  table_meta_df = tables_meta_df[tables_meta_df.table_name == table_name]
-                  tables_dict[table_name]["metadata"] = table_meta_df
-                  tables_dict_json[table_name] = {"metadata": table_meta_df.to_json(orient="records"), "table": tables_dict[table_name]["table"].reset_index().to_json(orient="records")}
-
-              # convert DFs to JSON for use in app
-              database_meta_json = database_meta_df.to_json(orient="index")
-            `);
-
-            this.state.tables =  pyodide.globals.get("tables_dict_json").toJs({ dict_converter: Object.fromEntries })
-
-            this.state.database_meta = JSON.parse(pyodide.globals.get("database_meta_json"));
-
-            console.log(this.state.database_meta)
-            console.log(this.state.tables)
-            this.render();
-          }
         }
 
-        var appComponent = new App();
-        appComponent.render();
+        render() {
+          app.innerHTML = this.home_view()
+        }
+
+        async loadData() {
+          console.log('load data clicked')
+          this.state.sheet_url =  new URL(document.getElementById('sheet-url').value)
+          this.state.sheetId = this.state.sheet_url.pathname.split("/")[3]
+          let pyodide = await loadPyodide();
+          await pyodide.loadPackage("pandas");
+          await pyodide.runPythonAsync(`
+            import js
+            import pandas as pd
+            import urllib
+            from pyodide.http import pyfetch
+
+            SHEET_ID = js.appComponent.state.sheetId
+            print(SHEET_ID)
+
+
+            #get sheet names
+
+            #for dev
+            #url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
+
+            #for prod
+            url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
+
+            response = await pyfetch(url)
+            if response.status == 200:
+                with open("metadata.csv", "wb") as f:
+                    f.write(await response.bytes())
+
+            # 2. load the csv file
+            database_meta_df = pd.read_csv("metadata.csv")
+            database_meta_df.set_index("sheetname", inplace=True)
+            sheet_names = database_meta_df.index.tolist()
+
+            # Get tables
+            tables_dict = {}
+
+            for SHEET_NAME in sheet_names:
+                #for dev
+                #url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
+
+                #for prod
+                url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
+
+                response = await pyfetch(url)
+                if response.status == 200:
+                    with open("table.csv", "wb") as f:
+                        f.write(await response.bytes())
+                df = pd.read_csv("table.csv")
+                tables_dict[SHEET_NAME] = {"table": df} 
+
+            # Get metadata for tables
+            meta_data = []
+            for table_name, table_dict in tables_dict.items():
+                new_names = {}
+                table = table_dict["table"]
+                for column_name in table.columns:
+                    data_type = column_name.split("[")[1].replace(']','').strip()
+                    if data_type == 'unique_id':
+                        new_column_name = 'unique_id'
+                    else:
+                        new_column_name = column_name.split("[")[0].strip()
+
+                  # setup foreign key relationships
+                    if data_type == "foreign key":
+                        related_table = new_column_name.split("_id")[0]
+                        if related_table in tables_dict.keys():
+                            # add relationship data for related table to current table
+                            meta_data.append([related_table, table_name+'_id', "foreign key", table_name, "many"])
+                            # setup relationship data for current table to related table
+                            relationship_type = "one"
+                            meta_data.append([table_name, new_column_name, data_type, related_table, relationship_type])
+                        else:
+                            print(f"Error while setting up relationship: {table_name} table indicates a relationship with {related_table} table, but no such table exists. No relationships were created between these tables.")
+                    else:
+                        related_table = None
+                        relationship_type = None
+                        meta_data.append([table_name, new_column_name, data_type, related_table, relationship_type])
+                    new_names[column_name] = new_column_name
+                if 'unique_id' not in new_names.values():
+                    print(f'Table definition error: No unique_id column was specificed for {table_name} table. Table not set up.')
+
+                else:
+                    table.rename(columns=new_names,inplace=True)
+                    table.set_index("unique_id", inplace=True)
+                    
+            tables_meta_df = pd.DataFrame(meta_data, columns=['table_name','field','data_type','related_table','relationship_type'])
+
+            tables_dict_json = {}
+            for table_name in tables_meta_df["table_name"].unique():
+                table_meta_df = tables_meta_df[tables_meta_df.table_name == table_name]
+                tables_dict[table_name]["metadata"] = table_meta_df
+                tables_dict_json[table_name] = {"metadata": table_meta_df.to_json(orient="records"), "table": tables_dict[table_name]["table"].reset_index().to_json(orient="records")}
+
+            # convert DFs to JSON for use in app
+            database_meta_json = database_meta_df.to_json(orient="index")
+          `);
+
+          this.state.tables =  pyodide.globals.get("tables_dict_json").toJs({ dict_converter: Object.fromEntries })
+
+          this.state.database_meta = JSON.parse(pyodide.globals.get("database_meta_json"));
+
+          console.log(this.state.database_meta)
+          console.log(this.state.tables)
+          this.render();
+        }
+      }
+
+      var appComponent = new App();
+      appComponent.render();
 
 
 
