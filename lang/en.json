@@ -1,0 +1,31 @@
+{
+
+    "title": "Wiki App",
+
+    "search-sr-label": "Load Data",
+
+    "search-placeholder": "Enter a google sheets url...",
+
+    "search-button": "Load Data", 
+
+    "nav-home": "Home",
+
+   "instructions-title": "Instructions",
+
+   "instructions-body": "info here about how to structure google sheet and link to template",
+
+   "troubleshooting-title": "Troubleshooting:",
+
+   "troubleshooting-body": "Common problems and how to fix them",
+
+   "description-title": "What is this?",
+
+   "description-body": "Info about what this is an how to report problems",
+
+   "articles-page-title": "All Categories of Articles",
+
+   "articles-page-error": "Error getting category information...",
+
+   "entries-page-error": "Error getting entries from this category..."
+
+}

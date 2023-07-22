@@ -1,0 +1,31 @@
+{
+
+    "title": "Aplicativo Wiki",
+
+    "search-sr-label": "Carregar Dados",
+
+    "search-placeholder": "Insira um URL do Google Sheets...",
+
+    "search-button": "Carregar Dados", 
+
+    "nav-home": "Pagina Inicial",
+
+   "instructions-title": "Instruções",
+
+   "instructions-body": "informações aqui sobre como estruturar a planilha do Google e vincular ao modelo",
+
+   "troubleshooting-title": "Solução de Problemas:",
+
+   "troubleshooting-body": "Problemas comuns e como corrigi-los",
+
+   "description-title": "O que é isso?",
+
+   "description-body": "Informações sobre o que é isso e como relatar problemas",
+
+   "articles-page-title": "Todas as categorias de artigos",
+
+   "articles-page-error": "Erro ao obter informações da categoria...",
+
+   "entries-page-error": "Erro ao obter entradas desta categoria..."
+
+}
