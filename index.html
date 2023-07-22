@@ -34,8 +34,9 @@
           return (`
     <div class="px-4 sm:px-6 lg:px-8">
       <div class="p-4 sm:flex sm:items-center">
-        <div class="sm:flex-auto">
+        <div class="flex justify-between sm:flex-auto">
           <h1 class="text-5xl font-semibold text-gray-200">Wiki App</h1>
+          ${this.language_picker_component()}
         </div>
       </div>
 
@@ -58,6 +59,17 @@
     </div>
   `)
           }
+
+        language_picker_component() {
+          return (`
+          <div>
+            <label for="underline_select" class="sr-only">Underline select</label>
+            <select id="underline_select" class="block py-2.5 px-0 w-full text-sm text-gray-500 bg-transparent border-0 border-b-2 border-gray-200 appearance-none dark:text-gray-400 dark:border-gray-700 focus:outline-none focus:ring-0 focus:border-gray-200 peer">
+                <option selected value="ENG">English</option>
+                <option value="POR">Portuguese</option>
+            </select>
+          </div>
+`)}
 
         search_component() {
           return (`
@@ -312,10 +324,10 @@
             #get sheet names
 
             #for dev
-            #url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
+            url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
 
             #for prod
-            url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
+            #url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
 
             response = await pyfetch(url)
             if response.status == 200:
@@ -332,10 +344,10 @@
 
             for SHEET_NAME in sheet_names:
                 #for dev
-                #url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
+                url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
 
                 #for prod
-                url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
+                #url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
 
                 response = await pyfetch(url)
                 if response.status == 200:
