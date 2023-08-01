@@ -244,7 +244,7 @@ ${this.state.sheet_url ? this.nav_component() : (``)}
           let table = this.state.tables[table_name].table
           let titleField = this.state.database_meta.loc({rows: [`"${table_name}"`]}).title_field.values[0]
           if (titleField) {
-            let filteredDf = table.iloc({rows: table[foreign_key_column_name].eq(target_entry_id)})
+            let filteredDf = table.loc({rows: table[foreign_key_column_name].eq(target_entry_id)})
             for (const index of filteredDf.index) {
               html += `
                 <li class="text-gray-200" ><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_table('${table_name}');appComponent.set_entry(${index});appComponent.render()">${table.at(index, titleField)}</a></li>
@@ -341,8 +341,10 @@ ${this.state.sheet_url ? this.nav_component() : (``)}
           } catch(err) {
               console.log("Error: ", err)
           }
-          //TODO: fix accent
-          databaseMetaDf.rename({"nome_da_planilha": "sheetname", "campo_de_título": "title_field"}, { inplace: true })
+         
+          //rename columns to account for Portguese column names
+          databaseMetaDf.columns.forEach((name, index) => {databaseMetaDf.columns[index] = name.normalize('NFD').replace(/\p{Diacritic}/gu, '')})
+          databaseMetaDf.rename({"nome_da_planilha": "sheetname", "campo_de_titulo": "title_field"}, { inplace: true })
           
           databaseMetaDf.setIndex({column:"sheetname", inplace:true})
 
@@ -422,7 +424,7 @@ ${this.state.sheet_url ? this.nav_component() : (``)}
       }
 
       function translate(dataType) {
-        console.log("Translating data_type: ", dataType)
+        dataType = dataType.normalize('NFD').replace(/\p{Diacritic}/gu, '')
         if (dataType == "texto") {
           return "text"
         } else if (dataType == 'numero') {
