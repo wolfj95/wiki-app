@@ -48,7 +48,7 @@ class App {
         home_view() {
           return (`
     <div class="px-4 sm:px-6 lg:px-8">
-      <div class="p-4 sm:flex sm:items-center">
+<div class="p-4 sm:flex sm:items-center">
         <div class="flex justify-between sm:flex-auto">
           <h1 class="text-5xl font-semibold text-gray-200" localization-key="title">Wiki App</h1>
           ${this.language_picker_component()}
@@ -58,7 +58,7 @@ class App {
      ${this.search_component()} 
 
      <div class="p-4 m-4 border border-gray-300 rounded-lg">
-      ${this.state.sheet_url ? this.nav_component() : (``)}
+${this.state.sheet_url ? this.nav_component() : (``)}
 
        ${this.state.current_entry ?
           this.single_entry_component()
@@ -170,8 +170,8 @@ class App {
         <div class="sm:flex-auto">
           <h1 class="text-4xl font-semibold text-gray-200" localization-key="articles-page-title">All Categories of Articles</h1>
           <ul class="list-disc px-5">
-            ${this.state.database_meta ? Object.keys(this.state.database_meta).map(function (sheet) {
-              if (appComponent.state.database_meta[sheet].title_field) { 
+            ${this.state.database_meta ? this.state.database_meta.index.map(function (sheet) {
+              if (appComponent.state.database_meta.loc({rows: [`"${sheet}"`]}).title_field.values[0]) { 
                 return (`
                   <li class="text-gray-200" ><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_table('${sheet}');appComponent.render()">${sheet}</a></li>
                 `)
@@ -187,14 +187,16 @@ class App {
           }
 
         all_entries_in_table_component() {
+          let currentTable = this.state.tables[this.state.current_table]
+          let titleField = appComponent.state.database_meta.loc({rows: [`"${this.state.current_table}"`]}).title_field.values[0]
           return (`
       <div class="sm:flex sm:items-center">
         <div class="sm:flex-auto">
           <h1 class="text-4xl font-semibold text-gray-200">${this.state.current_table}</h1>
           <ul class="list-disc px-5">
-            ${this.state.tables[this.state.current_table].table.length > 0 ? JSON.parse(this.state.tables[this.state.current_table].table).map(function (record) {
+            ${currentTable.table.index.length > 0 ? currentTable.table.index.map(function (index) {
               return (`
-                <li class="text-gray-200" ><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_entry('${record["unique_id"]}');appComponent.render()">${record[appComponent.state.database_meta[appComponent.state.current_table].title_field]}</a></li>
+                <li class="text-gray-200" ><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_entry(${index});appComponent.render()">${currentTable.table.loc({rows: [index]})[titleField].values[0]}</a></li>
               `)}).join('')
             :
               `<p class="text-red-200" localization-key="entries-page-error">Error getting entries from this category...</p>`
@@ -218,19 +220,18 @@ class App {
         one_to_one_representation(table_name, entry_id) {
           let html = `<h2 class="font-semibold text-gray-200 text-2xl">${table_name}:</h2>`
           html += `<div class="px-4">`
-          let table = JSON.parse(this.state.tables[table_name]["table"])
-          let entry = table.find(record => record.unique_id == entry_id)
-          let title_field = this.state.database_meta[table_name].title_field
-          if (title_field) {
-            html += `<h2 class="font-semibold text-gray-200 text-xl"><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_table('${table_name}');appComponent.set_entry('${entry["unique_id"]}');appComponent.render()">${entry[title_field]}</a></h2>`
+          let table = this.state.tables[table_name].table
+          let titleField = this.state.database_meta.loc({rows: [`"${table_name}"`]}).title_field.values[0]
+          if (titleField) {
+            html += `<h2 class="font-semibold text-gray-200 text-xl"><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_table('${table_name}');appComponent.set_entry(${entry_id});appComponent.render()">${table.at(entry_id, titleField)}</a></h2>`
           }
-          let metadata_table = JSON.parse(this.state.tables[table_name].metadata)
-          for (let i = 0; i < metadata_table.length; i++) {
-            let row = metadata_table[i]
-            let field = row['field']
-            let data_type = row['data_type']
-            if (data_type != "unique_id" & field != title_field & data_type != "foreign_key") {
-              html += `<p class="text-gray-200"><span class="font-semibold">${field}:</span> ${entry[field]}</p>`
+          let metadata_table = this.state.tables[table_name].metadata
+          for (let i = 0; i < metadata_table.index.length; i++) {
+            let field = metadata_table.iat(i, 1)
+            let data_type = metadata_table.iat(i, 2)
+            if (data_type != "unique_id" & field != titleField & data_type != "foreign_key") {
+              let field_data = table.at(entry_id, field)
+              html += `<p class="text-gray-200"><span class="font-semibold">${field}:</span> ${field_data}</p>`
             }
           } 
           html += `</div>`
@@ -240,29 +241,30 @@ class App {
         one_to_many_representation(table_name, parent_table_name, foreign_key_column_name, target_entry_id) {
           let html = `<h2 class="font-semibold text-gray-200 text-2xl">${table_name}:</h2>`
           html += `<ul class="list-disc px-5">`
-          let table = JSON.parse(this.state.tables[table_name]["table"])
-          let title_field = this.state.database_meta[table_name].title_field
-          if (title_field) {
-            for (let j = 0; j < table.length; j++) {
-              if (table[j][foreign_key_column_name] == target_entry_id) {
-                html += `
-                  <li class="text-gray-200" ><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_table('${table_name}');appComponent.set_entry('${table[j]["unique_id"]}');appComponent.render()">${table[j][title_field]}</a></li>
-                `
-              }
+          let table = this.state.tables[table_name].table
+          let titleField = this.state.database_meta.loc({rows: [`"${table_name}"`]}).title_field.values[0]
+          if (titleField) {
+            let filteredDf = table.iloc({rows: table[foreign_key_column_name].eq(target_entry_id)})
+            for (const index of filteredDf.index) {
+              html += `
+                <li class="text-gray-200" ><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_table('${table_name}');appComponent.set_entry(${index});appComponent.render()">${table.at(index, titleField)}</a></li>
+              `
             }
           } else {
-            let related_table_records = JSON.parse(this.state.tables[table_name].metadata).filter(record => record.relationship_type == "one" & record.related_table != parent_table_name)
-            let child_table_name = related_table_records[0].related_table
-            let child_table = JSON.parse(this.state.tables[child_table_name].table)
+            let metadata_table = this.state.tables[table_name].metadata
+            let related_table_records = metadata_table.query(metadata_table["relationship_type"].eq("one").and(metadata_table["related_table"].ne(parent_table_name)))
+            let child_table_name = related_table_records.iat(0, 3)
+            let child_table = this.state.tables[child_table_name].table
             let child_table_foreign_key_column_name = child_table_name + "_id"
-            let child_table_title_field = this.state.database_meta[child_table_name].title_field
-            for (let j = 0; j < table.length; j++) {
-              if (table[j][foreign_key_column_name] == target_entry_id) {
-                let child_table_related_record = child_table.find(record => record.unique_id == table[j][child_table_foreign_key_column_name])
-                html += `
-                  <li class="text-gray-200" ><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_table('${child_table_name}');appComponent.set_entry('${child_table_related_record["unique_id"]}');appComponent.render()">${child_table_related_record[child_table_title_field]}</a></li>
-                `
-              }
+            let child_table_title_field = this.state.database_meta.loc({rows: [`"${child_table_name}"`]}).title_field.values[0]
+
+            let filteredDf = table.loc( {rows: table[foreign_key_column_name].eq(target_entry_id)} )
+            for (const index of filteredDf.index) {
+              let child_table_related_record_id = table.at(index, child_table_foreign_key_column_name)
+              let child_table_related_record_title = child_table.at(child_table_related_record_id, child_table_title_field)
+              html += `
+                <li class="text-gray-200" ><a class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" onclick="appComponent.set_table('${child_table_name}');appComponent.set_entry(${child_table_related_record_id});appComponent.render()">${child_table_related_record_title}</a></li>
+              `
             }
           // pick foreign key that's not the parent table
           // use name/link from that table in list
@@ -273,30 +275,33 @@ class App {
 
         article_representation(table_name, entry_id, tables_expanded_so_far, curr_header_level, depth) {
           let html = ``
-          let table = JSON.parse(this.state.tables[table_name].table)
-          let metadata_table = JSON.parse(this.state.tables[table_name].metadata)
-          let title_field = this.state.database_meta[table_name].title_field
-          if (table.find(record => record.unique_id == entry_id)[title_field]) {
-            html += `<h2 class="font-semibold text-gray-200 text-4xl">${table.find(record => record.unique_id == entry_id)[title_field]}</h2>`
+          let table = this.state.tables[table_name].table
+          let metadata_table = this.state.tables[table_name].metadata
+          let titleField = appComponent.state.database_meta.loc({rows: [`"${this.state.current_table}"`]}).title_field.values[0]
+          let title_field = this.state.database_meta.loc({rows: [`"${table_name}"`]}).title_field.values[0]
+          if (table.at(entry_id, titleField)) {
+            html += `<h2 class="font-semibold text-gray-200 text-4xl">${table.at(entry_id, titleField)}</h2>`
           }
 
-          for (let i = 0; i < metadata_table.length; i++) {
-            let row = metadata_table[i]
-            let field = row['field']
-            let data_type = row['data_type']
+          for (let i = 0; i < metadata_table.index.length; i++) {
+            let field = metadata_table.iat(i, 1)
+            let data_type = metadata_table.iat(i, 2)
             if (data_type != "unique_id" & field != title_field) {
               if (data_type == "foreign_key") {
-                let related_table_name = row["related_table"]
-                if (row["relationship_type"] == "one") {
-                    html += this.one_to_one_representation(related_table_name, table.find(record => record.unique_id == entry_id)[field])
-                } else {
+                let related_table_name = metadata_table.iat(i, 3)
+                let relationshipType = metadata_table.iat(i, 4)
+                if (relationshipType == "one") {
+                  let related_entry_id = table.at(entry_id, field)
+                  html += this.one_to_one_representation(related_table_name, related_entry_id)
+              } else {
                   let foreign_key_column_name = table_name + "_id"
                   html += this.one_to_many_representation(related_table_name, table_name, foreign_key_column_name, entry_id)
                 }
               } else {
                 // Regular data field
+                let field_data = table.at(entry_id, field)
                 html += `<h2 class="font-semibold text-gray-200 text-2xl">${field}</h2>
-                  <p class="text-gray-200">${table.find(record => record.unique_id == entry_id)[field]}</p>`
+                  <p class="text-gray-200">${field_data}</p>`
               }
             }
           }
@@ -326,127 +331,112 @@ class App {
           console.log('load data clicked')
           this.state.sheet_url =  new URL(document.getElementById('sheet-url').value)
           this.state.sheetId = this.state.sheet_url.pathname.split("/")[3]
-          let pyodide = await loadPyodide();
-          await pyodide.loadPackage("pandas");
-          await pyodide.runPythonAsync(`
-            import js
-            import pandas as pd
-            import urllib
-            from pyodide.http import pyfetch
 
-            def translate(data_type):
-              data_type = data_type.encode('utf-8')
-              print("Translating data_type: ", data_type)
-              if data_type == "texto":
-                return "text"
-              elif data_type == u'n\xc3\xbamero':
-                return "number"
-              elif data_type == "date":
-                return "date"
-              elif data_type == "boleano":
-                return "boolean"
-              elif data_type == "chave_estrangeira":
-                return "foreign_key"
-              elif data_type == u'id_\xc3\xbanico':
-                print("uid")
-                return "unique_id"
-              else:
-                print("other")
-                return data_type
+          let url = `https://docs.google.com/spreadsheets/d/${this.state.sheetId}/gviz/tq?tqx=out:csv&sheet=meta&headers=1`
 
-            SHEET_ID = js.appComponent.state.sheetId
-            print(SHEET_ID)
+          //get metadata from gdoc
+          let databaseMetaDf = null
+          try {
+              databaseMetaDf = await dfd.readCSV(url)
+          } catch(err) {
+              console.log("Error: ", err)
+          }
+          //TODO: fix accent
+          databaseMetaDf.rename({"nome_da_planilha": "sheetname", "campo_de_título": "title_field"}, { inplace: true })
+          
+          databaseMetaDf.setIndex({column:"sheetname", inplace:true})
+
+          // get tables from gdoc sheets
+          let sheetNames = databaseMetaDf.index
+          let tables = {}
+          for (let i = 0; i < sheetNames.length; i++) {
+            let sheetName = sheetNames[i]
+            url = `https://docs.google.com/spreadsheets/d/${this.state.sheetId}/gviz/tq?tqx=out:csv&sheet=${sheetName}&headers=2`
+            let df = null
+            try {
+              df = await dfd.readCSV(url)
+              tables[sheetName] = {"table": df}
+            } catch (err) {
+              console.log("error getting table: ", sheetName)
+              console.log(err)
+            }
+          }
+
+          //get metadata from tables
+          let metaData = []
+          for (const key in tables) {
+            let newNames = {}
+            let table = tables[key].table
+            for (const columnName of table.columns) {
+              let dataType = columnName.split("[")[1].replace(']','').trim()
+              dataType = translate(dataType)
+              let newColumnName = ''
+              if (dataType == 'unique_id') {
+                newColumnName = 'unique_id'
+              } else {
+                newColumnName = columnName.split('[')[0].trim()
+              }
+
+              //set up foreign key relationships
+              if (dataType == 'foreign_key') {
+                let relatedTable = newColumnName.split('_id')[0]
+                if (relatedTable in tables) {
+                  // add relationship data for related table to current table
+                  metaData.push([relatedTable, key+'_id', "foreign_key", key, "many"])
+                  // add relationship data for current table to related table
+                  metaData.push([key, newColumnName, dataType, relatedTable, "one"])
+                } else {
+                  console.log(`Error while setting up relationship: ${key} table indicates a relationship with ${relatedTable} table, but no such table exists. No relationships were created between these tables.`)
+                }
+              } else {
+                let relatedTable = null
+                let relationshipType = null
+                metaData.push([key, newColumnName, dataType, relatedTable, relationshipType])
+              }
+              newNames[columnName] = newColumnName
+            }
+            if (!'unique_id' in newNames) {
+              console.log(`Table definition error: No unique_id column was specificed for ${key} table. Table not set up.`)
+            } else {
+              table.rename(newNames, {inplace:true})
+              table.setIndex({column:'unique_id', inplace:true})
+            }
+          }
+          let tablesMetaDf = new dfd.DataFrame(metaData, {columns:['table_name','field','data_type','related_table','relationship_type']})
+
+          for (const tableName of tablesMetaDf["table_name"].unique().values) {
+            let tableMetaDf = tablesMetaDf.query(tablesMetaDf['table_name'].eq(tableName)).resetIndex()
+            tables[tableName]["metadata"] = tableMetaDf
+          }
 
 
-            #get sheet names
-
-            #for dev
-            #url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
-
-            #for prod
-            url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=meta&headers=1'
-
-            response = await pyfetch(url)
-            if response.status == 200:
-                with open("metadata.csv", "wb") as f:
-                    f.write(await response.bytes())
-
-            # 2. load the csv file
-            database_meta_df = pd.read_csv("metadata.csv")
-            database_meta_df.rename(columns={"nome_da_planilha": "sheetname", "campo_de_título": "title_field"}, inplace=True)
-            database_meta_df.set_index("sheetname", inplace=True)
-            sheet_names = database_meta_df.index.tolist()
-
-            # Get tables
-            tables_dict = {}
-
-            for SHEET_NAME in sheet_names:
-                #for dev
-                #url = f'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
-
-                #for prod
-                url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}&headers=2'
-
-                response = await pyfetch(url)
-                if response.status == 200:
-                    with open("table.csv", "wb") as f:
-                        f.write(await response.bytes())
-                df = pd.read_csv("table.csv")
-                tables_dict[SHEET_NAME] = {"table": df} 
-
-            # Get metadata for tables
-            meta_data = []
-            for table_name, table_dict in tables_dict.items():
-                new_names = {}
-                table = table_dict["table"]
-                for column_name in table.columns:
-                    data_type = column_name.split("[")[1].replace(']','').strip()
-                    data_type = translate(data_type)
-                    if data_type == 'unique_id':
-                        new_column_name = 'unique_id'
-                    else:
-                        new_column_name = column_name.split("[")[0].strip()
-
-                  # setup foreign key relationships
-                    if data_type == "foreign_key":
-                        related_table = new_column_name.split("_id")[0]
-                        if related_table in tables_dict.keys():
-                            # add relationship data for related table to current table
-                            meta_data.append([related_table, table_name+'_id', "foreign_key", table_name, "many"])
-                            # setup relationship data for current table to related table
-                            relationship_type = "one"
-                            meta_data.append([table_name, new_column_name, data_type, related_table, relationship_type])
-                        else:
-                            print(f"Error while setting up relationship: {table_name} table indicates a relationship with {related_table} table, but no such table exists. No relationships were created between these tables.")
-                    else:
-                        related_table = None
-                        relationship_type = None
-                        meta_data.append([table_name, new_column_name, data_type, related_table, relationship_type])
-                    new_names[column_name] = new_column_name
-                if 'unique_id' not in new_names.values():
-                    print(f'Table definition error: No unique_id column was specificed for {table_name} table. Table not set up.')
-
-                else:
-                    table.rename(columns=new_names,inplace=True)
-                    table.set_index("unique_id", inplace=True)
-                    
-            tables_meta_df = pd.DataFrame(meta_data, columns=['table_name','field','data_type','related_table','relationship_type'])
-
-            tables_dict_json = {}
-            for table_name in tables_meta_df["table_name"].unique():
-                table_meta_df = tables_meta_df[tables_meta_df.table_name == table_name]
-                tables_dict[table_name]["metadata"] = table_meta_df
-                tables_dict_json[table_name] = {"metadata": table_meta_df.to_json(orient="records"), "table": tables_dict[table_name]["table"].reset_index().to_json(orient="records")}
-
-            # convert DFs to JSON for use in app
-            database_meta_json = database_meta_df.to_json(orient="index")
-          `);
-
-          this.state.tables =  pyodide.globals.get("tables_dict_json").toJs({ dict_converter: Object.fromEntries })
-
-          this.state.database_meta = JSON.parse(pyodide.globals.get("database_meta_json"));
-
+          console.log(databaseMetaDf)
+          this.state.database_meta = databaseMetaDf
+          console.log(tables)
+          this.state.tables = tables
+          let index = 1
+          let currentTable = this.state.tables.people
+          let titleField = "Name"
           this.render();
+        }
+      }
+
+      function translate(dataType) {
+        console.log("Translating data_type: ", dataType)
+        if (dataType == "texto") {
+          return "text"
+        } else if (dataType == 'numero') {
+          return "number"
+        } else if (dataType == "date") {
+          return "date"
+        } else if (dataType == "boleano") {
+          return "boolean"
+        } else if (dataType == "chave_estrangeira") {
+          return "foreign_key"
+        } else if (dataType == 'id_unico') {
+          return "unique_id"
+        } else {
+          return dataType
         }
       }
 
